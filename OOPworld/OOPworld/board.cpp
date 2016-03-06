@@ -1,15 +1,198 @@
 #include "board.h"
-#include <cstdio>
 
-board::board() {
-	for (int i = 0; i < sizey; i++) {
-		for (int j = 0; j < sizex; j++) {
-			isi[i][j] = ' ';
+int sizex;
+int sizey;
+int sizepintu_p;
+Point min_h_vertical, min_k_vertical;
+Point max_h_vertical, max_k_vertical;
+Point min_h_horizontal, min_k_horizontal;
+Point max_h_horizontal, max_k_horizontal;
+char** isi;
+Point pintu_u;	// pintu benteng utara 
+Point pintu_s;	// pintu benteng selatan 
+Point* pintu_p;	// pintu benteng perlindungan 
+
+void board() {
+	
+	// struktur input board dari file
+	//---sizex sizey 
+	//---!!!!!!!!!!
+	//---!hhhhhhhh!
+	//---!!!!!x!!!!
+	//---kkkkkkkkkk
+	//---k!!!kk!!!k
+	//---k!tqkkqt!k
+	//---k!!!kk!!!k 
+	//---kkkkkkkkkk 
+	//---!!!!!y!!!!
+	//---!!!!!!!!!!
+	//
+	// h = wilayah herbivora (kura2[a], kelinci[k], zebra[z])
+	// k = wilayah karnivora (singa[s], elang[e], ular[u])
+	// ! = dinding benteng
+	// x = pintu masuk/keluar benteng utara
+	// y = pintu masuk/keluar benteng selatan
+	// t = saved area
+	// q = pintu masuk/keluar benteng perlindungan
+	
+	ifstream myfile;
+	myfile.open("board.txt");
+	char c;
+	int counter = 0;
+	
+	string line;
+	string token;
+	if (myfile.is_open()) {
+		getline(myfile, line);
+		stringstream lineStream(line);
+		
+		while (lineStream >> token) {
+			if (counter == 0) {
+				sizex = stoi(token);
+			} else if(counter == 1) {
+				sizey = stoi(token);
+			}
+			counter++;
 		}
+		cout << "ukuran board (x-y): " << sizex << " " << sizey << endl;
+		// alokasi array of char 
+		isi = new char*[sizey];
+		for(int i = 0; i < sizey; ++i) {
+			isi[i] = new char[sizex];
+		}
+		
+		// mengisi array dengan input board 
+		// sekaligus inisiasi posisi pintu masuk/keluar benteng 
+		int c_pjg = 0;
+		int c_ptp = 0;	
+		while (getline(myfile, line)) {
+			stringstream lineStream(line);
+			while (lineStream >> token) {
+				for (int i = 0; i < token.length(); i++) {
+					isi[c_pjg][i] = token[i];
+					if (token[i] == 'x') { // lokasi pintu_u 
+						pintu_u.set(i, c_pjg);
+					} else if (token[i] == 'y') { // lokasi pintu_s 
+						pintu_s.set(i, c_pjg);
+					} else if (token[i] == 'q') { // lokasi pintu_p 
+						c_ptp++;
+					}
+				}
+				c_pjg++;
+			}
+		}
+		
+		// inisiasi posisi pintu_p yang berjumlah c_ptp 
+		pintu_p = new Point[c_ptp];
+		counter = 0;
+		for (int i = 0; i < sizey; i++) {
+			for (int j = 0; j < sizex; j++) {
+				if (isi[i][j] == 'q') {
+					pintu_p[counter].set(j, i);
+					counter++;
+				}
+			}
+		}
+		sizepintu_p = c_ptp;
+		
+		// inisiasi nilai min_h dan max_h utk herbivora 
+		int px, py;
+		min_h_ver('h', &px, &py);
+		min_h_vertical.set(px, py);
+		max_h_ver('h', &px, &py);
+		max_h_vertical.set(px, py);
+		min_h_hor('h', &px, &py);
+		min_h_horizontal.set(px, py);
+		max_h_hor('h', &px, &py);
+		max_h_horizontal.set(px, py);
+		
+		// inisiasi nilai min_h dan max_h utk karnivora 
+		min_h_ver('k', &px, &py);
+		min_k_vertical.set(px, py);
+		max_h_ver('k', &px, &py);
+		max_k_vertical.set(px, py);
+		min_h_hor('k', &px, &py);
+		min_k_horizontal.set(px, py);
+		max_h_hor('k', &px, &py);
+		max_k_horizontal.set(px, py);
+		
+		// tutup file 
+		myfile.close();
+	} else {
+		cout << "gagal membuka file board.txt" << endl;
 	}
+	
 }
 
-void board::printboard() {
+void min_h_ver(char jns_obj, int* x, int* y) {
+	int i, j, found = 0;
+	for (i = 0; i < sizex; i++) {
+		for (j = 0; j < sizey; j++) {
+			if (isi[j][i] == jns_obj) {
+				found = 1;
+				break;
+			}
+		}
+		if (found == 1) {
+			break;
+		}
+	}
+	*x = j;
+	*y = i;
+}
+
+void max_h_ver(char jns_obj, int* x, int* y) {
+	int i, j, found = 0;
+	for (i = sizex-1; i >= 0; i--) {
+		for (j = 0; j < sizey; j++) {
+			if (isi[j][i] == jns_obj) {
+				found = 1;
+				break;
+			}
+		}
+		if (found == 1) {
+			break;
+		}
+	}
+	*x = j;
+	*y = i;
+}
+
+void min_h_hor(char jns_obj, int* x, int* y) {
+	int i, j, found = 0;
+	for (i = 0; i < sizey; i++) {
+		for (j = 0; j < sizex; j++) {
+			if (isi[i][j] == jns_obj) {
+				found = 1;
+				break;
+			}
+		}
+		if (found == 1) {
+			break;
+		}
+	}
+	*x = i;
+	*y = j;
+}
+
+void max_h_hor(char jns_obj, int* x, int* y) {
+	int i, j, found = 0;
+	for (i = sizey-1; i >= 0; i--) {
+		for (j = 0; j < sizex; j++) {
+			if (isi[i][j] == jns_obj) {
+				found = 1;
+				break;
+			}
+		}
+		if (found == 1) {
+			break;
+		}
+	}
+	*x = i;
+	*y = j;
+}
+
+void printboard() {
 	printf(" ");
 	for (int i = 0; i < sizex; i++)
 		printf("%d", i % 10);
@@ -23,52 +206,39 @@ void board::printboard() {
 	}
 }
 
-void board::tambah(makhluk& m) {
+void tambah(makhluk& m, char ch) {
 	Point P = m.getlok();
-	isi[P.getY()][P.getX()] = m.getid();
+	isi[P.getY()][P.getX()] = ch;
 }
 
-void board::move(makhluk& m) {
+void move(makhluk& m, char ch) {
+	
+	// list of makhluk (LOM) = {zebra1, singa1}
+	// untuk karnivora:
+	//--- jika di LOM ada herbivora, maka menjalankan prosedur mengejar
+	//--- jika tidak ada, jalankan prosedur move biasa 
+	
 	Point P = m.getlok();
-	isi[P.getY()][P.getX()] = ' ';
+	isi[P.getY()][P.getX()] = '.';
 	m.bergerak();
 	P = m.getlok();
-	isi[P.getY()][P.getX()] = m.getid();
+	isi[P.getY()][P.getX()] = ch;
 }
 
-void board::hapus(makhluk& m) {
+void hapus(makhluk& m) {
 	Point P = m.getlok();
-	isi[P.getX()][P.getY()] = ' ';
+	isi[P.getX()][P.getY()] = '.';
 }
 
-void board::tofile() {
-	ofstream ofs("save.csv", ofstream::binary);
-	char* buffer;
-	int sizeall = (sizey*sizex*2) + (sizey*2);
-	buffer = new char[sizeall];
-	int b, k;
-	b = k = 0;
-	int i = 0;
-	while (i < sizeall) {
-		if (k >= sizex) {
-			buffer[i] = 0x0d;
-			i++;
-			buffer[i] = 0x0a;
-			k = 0; b++;
-		}
-		else {
-			buffer[i] = isi[b][k];
-			k++;
-			i++;
-			buffer[i] = 0x2c;
-		}
-		i++;
-	}
-	try {
-		ofs.write(buffer, sizeall);
-	}
-	catch (int e) {
-		cout << "exception occured: "<<e << endl;
-	}
-	ofs.close();
+void deallocate_board() {
+	// dealokasi array board 
+	for (int i = 0; i < sizey; i++) {
+        delete[] isi[i];
+    }
+    delete[] isi;
+	isi = 0;
+	cout << "dealokasi board" << endl;
+	// dealokasi array pintu_p 
+	delete[] pintu_p;
+	cout << "dealokasi pintu_p" << endl;
 }
